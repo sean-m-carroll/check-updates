@@ -7,22 +7,40 @@ function pad(str, width) {
   return str.padEnd(width, " ");
 }
 
-function getUpdateType(current, target) {
-  if (!current || !target) return "patch";
-
-  const [cMaj, cMin] = current.replace(/^[^\d]*/, "").split(".").map(Number);
-  const [tMaj, tMin] = target.replace(/^[^\d]*/, "").split(".").map(Number);
-
-  if (tMaj > cMaj) return "major";
-  if (tMin > cMin) return "minor";
-  return "patch";
+function getUpdateType(pkg) {
+  if (pkg.fallbackUsed) return "fallback";
+  if (pkg.major) return "major";
+  return "minor";
 }
 
 function colourVersion(type, version, enableColour) {
   if (!enableColour) return version;
   if (type === "major") return `${RED}${version}${RESET}`;
   if (type === "minor") return `${CYAN}${version}${RESET}`;
-  return `${GREEN}${version}${RESET}`;
+  if (type === "fallback") return `${GREEN}${version}${RESET}`;
+  return version;
+}
+
+function buildNotes(pkg) {
+  const notes = [];
+
+  if (pkg.fallbackUsed) {
+    notes.push("Fallback update");
+  } else if (pkg.major) {
+    notes.push("Major update");
+  } else {
+    notes.push("Minor update");
+  }
+
+  if (pkg.major && !pkg.majorAllowed) {
+    notes.push("Blocked by rule");
+  }
+
+  if (!pkg.eligible) {
+    notes.push("Not eligible");
+  }
+
+  return notes.join("; ");
 }
 
 export function formatReport(result) {
@@ -44,21 +62,19 @@ export function formatReport(result) {
     lines.push("No packages eligible for update.");
   } else {
     for (const p of result.packagesToUpdate) {
-      const type = getUpdateType(p.currentVersion, p.targetVersion);
+      const type = getUpdateType(p);
       const coloured = colourVersion(type, p.targetVersion, result.colour);
+      const cooldown = `${p.cooldownDays}d`;
+      const notes = buildNotes(p);
 
-      const notes = [
-        p.major ? "Major update" : "",
-        p.majorAllowed ? "Allowed" : "Blocked"
-      ].filter(Boolean).join(", ");
-
-      lines.push(
+      const row =
         pad(p.name, 25) +
-        pad(p.currentVersion ?? "-", 15) +
-        pad(coloured ?? "-", 15) +
-        pad(`${p.cooldownDays ?? '-'}d`, 12) +
-        notes
-      );
+        pad(p.currentVersion, 15) +
+        pad(coloured, 15) +
+        pad(cooldown, 12) +
+        notes;
+
+      lines.push(row);
     }
   }
 
@@ -70,16 +86,19 @@ export function formatReport(result) {
     lines.push("None");
   } else {
     for (const p of result.majorUpdates) {
-      const coloured = colourVersion("major", p.targetVersion, result.colour);
-      const notes = p.majorAllowed ? "Allowed" : "Blocked";
+      const type = getUpdateType(p);
+      const coloured = colourVersion(type, p.targetVersion, result.colour);
+      const cooldown = `${p.cooldownDays}d`;
+      const notes = buildNotes(p);
 
-      lines.push(
+      const row =
         pad(p.name, 25) +
-        pad(p.currentVersion ?? "-", 15) +
-        pad(coloured ?? "-", 15) +
-        pad(`${p.cooldownDays ?? '-'}d`, 12) +
-        notes
-      );
+        pad(p.currentVersion, 15) +
+        pad(coloured, 15) +
+        pad(cooldown, 12) +
+        notes;
+
+      lines.push(row);
     }
   }
 

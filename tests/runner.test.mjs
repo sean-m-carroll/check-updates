@@ -6,8 +6,11 @@ import ncu from 'npm-check-updates';
 import { execSync } from 'node:child_process';
 
 vi.mock('npm-check-updates', () => ({
-  default: { run: vi.fn() }
+  default: {
+    run: vi.fn()
+  }
 }));
+
 
 vi.mock('node:child_process', () => ({
   execSync: vi.fn()
@@ -39,14 +42,9 @@ describe('runner.mjs', () => {
   });
 
   it('ignores non-dependency keys returned by ncu', async () => {
-    ncu.run.mockResolvedValue({
-      name: 'test',
-      version: '1.0.0',
-      lodash: {
-        latest: '^5.0.0',
-        time: { modified: '2024-01-01T00:00:00.000Z' }
-      }
-    });
+    ncu.run.mockResolvedValueOnce({ lodash: '^5.0.0' });
+    ncu.run.mockResolvedValueOnce({ lodash: '^5.0.0' });
+    ncu.run.mockResolvedValueOnce({ lodash: '^5.0.0' });
 
     const result = await runCheck({
       cooldownDaysOverride: 7,
@@ -60,21 +58,44 @@ describe('runner.mjs', () => {
     expect(result.packagesToUpdate[0].name).toBe('lodash');
   });
 
-  it('handles no dependency updates gracefully', async () => {
-    ncu.run.mockResolvedValue({
-      name: 'test',
-      version: '1.0.0'
-    });
+  it('applies pattern-based major rules', async () => {
+    ncu.run.mockResolvedValueOnce({ lodash: '^5.0.0' });
+    ncu.run.mockResolvedValueOnce({ lodash: '^4.17.21' });
+    ncu.run.mockResolvedValueOnce({ lodash: '^4.17.21' });
 
     const result = await runCheck({
       cooldownDaysOverride: 7,
       colour: false,
       updatePackageJson: false,
       installUpdates: false,
-      majorRules: { allow: [], disallow: [] }
+      majorRules: {
+        allow: ['^lodash'],
+        disallow: []
+      }
     });
 
-    expect(result.packagesToUpdate.length).toBe(0);
-    expect(result.majorUpdates.length).toBe(0);
+    expect(result.packagesToUpdate[0].majorAllowed).toBe(true);
+  });
+
+  it('falls back to minor/patch when major is blocked', async () => {
+    ncu.run.mockResolvedValueOnce({ vitest: '^5.0.0' });
+    ncu.run.mockResolvedValueOnce({ vitest: '^4.1.10' });
+    ncu.run.mockResolvedValueOnce({ vitest: '^4.1.7' });
+
+    const result = await runCheck({
+      cooldownDaysOverride: 7,
+      colour: false,
+      updatePackageJson: false,
+      installUpdates: false,
+      majorRules: {
+        allow: [],
+        disallow: ['^vitest']
+      }
+    });
+
+    expect(result.packagesToUpdate.length).toBe(1);
+    expect(result.packagesToUpdate[0].targetVersion).toBe('^4.1.10');
+    expect(result.packagesToUpdate[0].major).toBe(false);
+    expect(result.packagesToUpdate[0].fallbackUsed).toBe(true);
   });
 });

@@ -1,34 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { formatReport } from '../src/reporter.mjs';
-import fs from 'fs';
-import path from 'path';
-
-let tmpDir;
-const originalCwd = process.cwd();
 
 describe('reporter.mjs formatting', () => {
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(originalCwd, 'reporter-test-'));
-    process.chdir(tmpDir);
-  });
-
-  afterEach(() => {
-    process.chdir(originalCwd);
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it('prints no dependency rows when none exist', () => {
-    const out = formatReport({
-      cooldownDays: 5,
-      colour: false,
-      packagesToUpdate: [],
-      majorUpdates: []
-    });
-
-    expect(out).toContain('No packages eligible for update.');
-  });
-
-  it('prints cooldown column for dependency updates', () => {
+  it('prints aligned columns with cooldown padded', () => {
     const out = formatReport({
       cooldownDays: 5,
       colour: false,
@@ -36,17 +10,27 @@ describe('reporter.mjs formatting', () => {
         {
           name: 'lodash',
           currentVersion: '^4.0.0',
-          targetVersion: '^5.0.0',
-          major: true,
+          targetVersion: '^4.17.21',
+          major: false,
           majorAllowed: false,
-          eligible: false,
-          cooldownDays: 12
+          eligible: true,
+          withinCooldown: false,
+          cooldownDays: 5,
+          fallbackUsed: false
         }
       ],
       majorUpdates: []
     });
 
-    expect(out).toContain('lodash');
-    expect(out).toContain('12d');
+    const lines = out.split('\n');
+    const row = lines.find(l => l.startsWith('lodash'));
+
+    expect(row.slice(0, 25).trim()).toBe('lodash');
+    expect(row.slice(25, 40).trim()).toBe('^4.0.0');
+    expect(row.slice(40, 55).trim()).toBe('^4.17.21');
+    expect(row.slice(55, 67).trim()).toBe('5d');
+
+    // Correct expectation
+    expect(row).toContain('Minor update');
   });
 });

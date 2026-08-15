@@ -1,23 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { formatReport } from '../src/reporter.mjs';
-import fs from 'fs';
-import path from 'path';
-
-let tmpDir;
-const originalCwd = process.cwd();
 
 describe('reporter coloured table', () => {
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(originalCwd, 'reporter-colour-test-'));
-    process.chdir(tmpDir);
-  });
-
-  afterEach(() => {
-    process.chdir(originalCwd);
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it('matches snapshot with only dependency rows', () => {
+  it('matches snapshot with smarter reporting', () => {
     const result = {
       cooldownDays: 10,
       colour: false,
@@ -25,10 +10,11 @@ describe('reporter coloured table', () => {
         {
           name: 'lodash',
           currentVersion: '^4.0.0',
-          targetVersion: '^5.0.0',
-          major: true,
+          targetVersion: '^4.17.21',
+          major: false,
           majorAllowed: true,
           eligible: true,
+          withinCooldown: false,
           cooldownDays: 12
         }
       ],

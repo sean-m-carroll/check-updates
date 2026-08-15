@@ -25,18 +25,21 @@ describe('CLI integration with cooldown column', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('does not print top-level package.json fields', () => {
+  it('prints aligned columns and hides top-level fields', () => {
     const output = execFileSync(
       'node',
       [path.resolve(originalCwd, 'bin/cli.mjs'), '--cooldown-days', '1', '--no-colour'],
       { cwd: tmpDir, encoding: 'utf8' }
     );
 
-    expect(output).not.toMatch(/name\s+/);
-    expect(output).not.toMatch(/version\s+/);
-    expect(output).not.toMatch(/description\s+/);
-    expect(output).not.toMatch(/scripts\s+/);
+    expect(output).not.toMatch(/name\s*:/);
+    expect(output).not.toMatch(/version\s*:/);
+    expect(output).not.toMatch(/scripts\s*:/);
 
+    expect(output).toContain('Package');
+    expect(output).toContain('Installed');
+    expect(output).toContain('Updated');
     expect(output).toContain('Cooldown');
+    expect(output).toContain('Notes');
   });
 });

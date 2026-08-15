@@ -213,3 +213,11 @@ Useful for testing before publishing.
  - Respect release cooldowns
  - Provide clear, readable reports
  - Integrate cleanly with CI
+
+
+<!-- {
+  "majorRules": {
+    "allow": ["^react", "^@types/"],
+    "disallow": ["^eslint", "^vitest"]
+  }
+} -->
