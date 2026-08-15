@@ -7,8 +7,7 @@
   },
   "scripts": {
     "test": "vitest run --coverage",
-    "test:watch": "vitest",
-    "lint": "eslint ."
+    "test:watch": "vitest"
   },
   "dependencies": {
     "npm-check-updates": "23.0.2",
