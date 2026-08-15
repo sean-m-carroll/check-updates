@@ -1,0 +1,21 @@
+{
+  "name": "@4t2/check-updates",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "@4t2/check-updates": "./bin/cli.mjs"
+  },
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "npm-check-updates": "^17.0.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.10",
+    "vitest": "^4.0.0"
+  }
+}
