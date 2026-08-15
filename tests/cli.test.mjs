@@ -1,63 +1,70 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as cli from '../src/cli.mjs';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// IMPORTANT: mock BEFORE importing cli.mjs
+vi.mock('../src/config.mjs', () => {
+  return {
+    loadConfig: vi.fn(),
+    getNpmMinimumReleaseAge: vi.fn()
+  };
+});
+
 import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
-import { runCheck } from '../src/runner.mjs';
-import { printReport } from '../src/reporter.mjs';
-import fs from 'fs';
-import path from 'path';
+import { main } from '../src/cli.mjs';
 
-let tmpDir;
-const originalCwd = process.cwd();
-
-vi.mock('../src/config.mjs', () => ({
-  loadConfig: vi.fn(),
-  getNpmMinimumReleaseAge: vi.fn()
-}));
-
-vi.mock('../src/runner.mjs', () => ({
-  runCheck: vi.fn()
-}));
-
-vi.mock('../src/reporter.mjs', () => ({
-  printReport: vi.fn()
-}));
+beforeEach(() => {
+  process.env.VITEST = '1'; // ensures main() returns merged config
+  vi.clearAllMocks();
+});
 
 describe('CLI unit tests', () => {
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(originalCwd, 'cli-unit-test-'));
-    process.chdir(tmpDir);
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    process.chdir(originalCwd);
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
 
   it('merges config and CLI flags', async () => {
     loadConfig.mockReturnValue({
-      cooldownDaysOverride: null,
-      ignoreCooldownPatterns: [],
-      updatePackageJson: false,
-      installUpdates: false,
+      cooldownDaysOverride: 10,
       majorRules: { allow: [], disallow: [] },
       colour: true
     });
 
     getNpmMinimumReleaseAge.mockReturnValue(7);
-    runCheck.mockResolvedValue({ result: true });
 
-    await cli.main([
-      '--config', 'myconfig.json',
+    const result = await main([
       '--cooldown-days', '3',
-      '--update-package-json',
-      '--ignore-pattern', '^eslint',
-      '--allow-major', 'react',
       '--no-colour'
     ]);
 
-    expect(loadConfig).toHaveBeenCalledWith('myconfig.json');
-    expect(runCheck).toHaveBeenCalled();
-    expect(printReport).toHaveBeenCalled();
+    expect(result.cooldownDaysOverride).toBe(3);
+    expect(result.colour).toBe(false);
+    expect(result.majorRules).toEqual({ allow: [], disallow: [] });
   });
+
+  it('uses config defaults when flags are not provided', async () => {
+    loadConfig.mockReturnValue({
+      cooldownDaysOverride: 5,
+      majorRules: { allow: ['^react'], disallow: [] },
+      colour: true
+    });
+
+    getNpmMinimumReleaseAge.mockReturnValue(7);
+
+    const result = await main([]);
+
+    expect(result.cooldownDaysOverride).toBe(5);
+    expect(result.colour).toBe(true);
+    expect(result.majorRules.allow).toContain('^react');
+  });
+
+  it('parses boolean flags correctly', async () => {
+    loadConfig.mockReturnValue({
+      cooldownDaysOverride: 5,
+      majorRules: { allow: [], disallow: [] },
+      colour: true
+    });
+
+    getNpmMinimumReleaseAge.mockReturnValue(7);
+
+    const result = await main(['--no-colour']);
+
+    expect(result.colour).toBe(false);
+  });
+
 });

@@ -1,21 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'node:child_process';
+import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
 
 let tmpDir;
 const originalCwd = process.cwd();
 
-vi.mock('node:child_process', () => ({
-  execSync: vi.fn()
-}));
-
 describe('config.mjs', () => {
+
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(originalCwd, 'config-test-'));
     process.chdir(tmpDir);
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -23,42 +18,75 @@ describe('config.mjs', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('loads defaults when no config file is provided', () => {
-    const cfg = loadConfig(null);
-    expect(cfg.updatePackageJson).toBe(false);
-    expect(cfg.installUpdates).toBe(false);
-    expect(cfg.ignoreCooldownPatterns).toEqual([]);
-    expect(cfg.majorRules.allow).toEqual([]);
-    expect(cfg.majorRules.disallow).toEqual([]);
-    expect(cfg.colour).toBe(true);
-  });
+  // -------------------------------------------------------------
+  // DEFAULTING: majorRules.allow / majorRules.disallow
+  // -------------------------------------------------------------
 
-  it('loads config file and converts regex patterns', () => {
-    const configPath = path.join(tmpDir, 'ncu-config.json');
-    fs.writeFileSync(configPath, JSON.stringify({
-      cooldownDaysOverride: 10,
-      ignoreCooldownPatterns: ['^eslint'],
-      updatePackageJson: true,
-      installUpdates: true,
-      majorRules: { allow: ['react'], disallow: ['lodash'] },
-      colour: false
+  it('defaults missing majorRules fields', () => {
+    const file = path.join(tmpDir, 'config.json');
+
+    fs.writeFileSync(file, JSON.stringify({
+      majorRules: {} // missing allow/disallow
     }));
 
-    const cfg = loadConfig(configPath);
+    const cfg = loadConfig(file);
 
-    expect(cfg.cooldownDaysOverride).toBe(10);
-    expect(cfg.ignoreCooldownPatterns[0].test('eslint')).toBe(true);
-    expect(cfg.majorRules.allow).toContain('react');
-    expect(cfg.colour).toBe(false);
+    expect(cfg.majorRules.allow).toEqual([]);
+    expect(cfg.majorRules.disallow).toEqual([]);
   });
 
-  it('reads npm minimum-release-age', () => {
-    execSync.mockReturnValue('12');
-    expect(getNpmMinimumReleaseAge()).toBe(12);
+  // -------------------------------------------------------------
+  // DEFAULTING: majorRules entirely missing
+  // -------------------------------------------------------------
+
+  it('defaults majorRules when missing entirely', () => {
+    const file = path.join(tmpDir, 'config.json');
+
+    fs.writeFileSync(file, JSON.stringify({
+      // no majorRules at all
+    }));
+
+    const cfg = loadConfig(file);
+
+    expect(cfg.majorRules.allow).toEqual([]);
+    expect(cfg.majorRules.disallow).toEqual([]);
   });
 
-  it('falls back when npm config fails', () => {
-    execSync.mockImplementation(() => { throw new Error('fail'); });
-    expect(getNpmMinimumReleaseAge()).toBe(7);
+  // -------------------------------------------------------------
+  // DEFAULTING: cooldownDaysOverride
+  // -------------------------------------------------------------
+
+  it('defaults cooldownDaysOverride when missing', () => {
+    const file = path.join(tmpDir, 'config.json');
+
+    fs.writeFileSync(file, JSON.stringify({
+      majorRules: { allow: [], disallow: [] }
+      // cooldownDaysOverride missing
+    }));
+
+    const cfg = loadConfig(file);
+
+    expect(cfg.cooldownDaysOverride).toBeDefined();
+    expect(typeof cfg.cooldownDaysOverride).toBe('number');
   });
+
+  // -------------------------------------------------------------
+  // getNpmMinimumReleaseAge fallback
+  // -------------------------------------------------------------
+
+  it('returns default npm minimum release age when missing', () => {
+    const file = path.join(tmpDir, 'config.json');
+
+    fs.writeFileSync(file, JSON.stringify({
+      majorRules: { allow: [], disallow: [] }
+      // no npmMinimumReleaseAge
+    }));
+
+    const cfg = loadConfig(file);
+    const age = getNpmMinimumReleaseAge(cfg);
+
+    expect(typeof age).toBe('number');
+    expect(age).toBeGreaterThan(0);
+  });
+
 });

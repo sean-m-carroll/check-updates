@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reporter coloured table > matches snapshot with smarter reporting 1`] = `
+"Cooldown days: 10
+
+Package                  Installed      Updated        Cooldown    Notes
+--------------------------------------------------------------------------------
+lodash                   ^4.0.0         ^4.17.21                12d         Minor update
+
+Major updates:
+--------------------------------------------------------------------------------
+None"
+`;

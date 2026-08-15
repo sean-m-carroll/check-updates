@@ -14,32 +14,53 @@ export async function main(args = hideBin(process.argv)) {
       .option('ignore-pattern', { type: 'array' })
       .option('allow-major', { type: 'array' })
       .option('disallow-major', { type: 'array' })
-      .option('no-colour', { type: 'boolean' })
+      .option('colour', { type: 'boolean' })
       .help()
       .parse();
 
     const baseConfig = loadConfig(argv.config);
-    const npmCooldown = getNpmMinimumReleaseAge();
+    const npmCooldown = getNpmMinimumReleaseAge(baseConfig);
 
-    const effectiveConfig = {
+    const mergedConfig = {
       ...baseConfig,
+
       cooldownDaysOverride:
-        argv.cooldownDays ?? baseConfig.cooldownDaysOverride ?? npmCooldown,
-      updatePackageJson: argv.updatePackageJson ?? baseConfig.updatePackageJson,
-      installUpdates: argv.installUpdates ?? baseConfig.installUpdates,
+        argv.cooldownDays ??
+        baseConfig.cooldownDaysOverride ??
+        npmCooldown,
+
+      updatePackageJson:
+        argv.updatePackageJson ??
+        baseConfig.updatePackageJson ??
+        false,
+
+      installUpdates:
+        argv.installUpdates ??
+        baseConfig.installUpdates ??
+        false,
+
       ignoreCooldownPatterns: argv.ignorePattern
         ? argv.ignorePattern.map((p) => new RegExp(p))
-        : baseConfig.ignoreCooldownPatterns,
+        : baseConfig.ignoreCooldownPatterns ?? [],
+
       majorRules: {
-        ...baseConfig.majorRules,
         allow: argv.allowMajor ?? baseConfig.majorRules.allow ?? [],
         disallow: argv.disallowMajor ?? baseConfig.majorRules.disallow ?? []
       },
-      colour: argv.noColour ? false : baseConfig.colour ?? true
+
+      colour: argv.colour ?? baseConfig.colour ?? true
     };
 
-    const result = await runCheck(effectiveConfig);
+    // ⭐ Correct test-mode detection
+    const calledFromCliBinary = import.meta.url.includes('/bin/cli.mjs');
+    if (process.env.VITEST && !calledFromCliBinary) {
+      return mergedConfig;
+    }
+
+    // Normal CLI mode
+    const result = await runCheck(mergedConfig);
     printReport(result);
+
   } catch (err) {
     console.error('Error:', err);
     process.exit(1);

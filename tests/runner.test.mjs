@@ -98,4 +98,73 @@ describe('runner.mjs', () => {
     expect(result.packagesToUpdate[0].major).toBe(false);
     expect(result.packagesToUpdate[0].fallbackUsed).toBe(true);
   });
+
+  // it('marks fallbackUsed when major is blocked', async () => {
+  //   ncu.default.run
+  //     .mockResolvedValueOnce({ pkg: '^5.0.0' })   // latestSafe
+  //     .mockResolvedValueOnce({ pkg: '^4.1.0' })   // minorSafe
+  //     .mockResolvedValueOnce({ pkg: '^4.0.5' });  // patchSafe
+
+  //   const result = await runCheck({
+  //     cooldownDaysOverride: 5,
+  //     colour: false,
+  //     updatePackageJson: false,
+  //     installUpdates: false,
+  //     majorRules: { allow: [], disallow: ['^pkg'] }
+  //   });
+
+  //   expect(result.packagesToUpdate[0].fallbackUsed).toBe(true);
+  // });
+
+  // it('does not mark fallbackUsed when latest is allowed', async () => {
+  //   ncu.default.run
+  //     .mockResolvedValueOnce({ pkg: '^2.0.0' })
+  //     .mockResolvedValueOnce({ pkg: '^2.0.0' })
+  //     .mockResolvedValueOnce({ pkg: '^2.0.0' });
+
+  //   const result = await runCheck({
+  //     cooldownDaysOverride: 5,
+  //     colour: false,
+  //     updatePackageJson: false,
+  //     installUpdates: false,
+  //     majorRules: { allow: ['^pkg'], disallow: [] }
+  //   });
+
+  //   expect(result.packagesToUpdate[0].fallbackUsed).toBe(false);
+  // });
+
+  // it('writes updated versions to package.json when updatePackageJson is true', async () => {
+  //   ncu.default.run
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' })
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' })
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' });
+
+  //   await runCheck({
+  //     cooldownDaysOverride: 5,
+  //     colour: false,
+  //     updatePackageJson: true,
+  //     installUpdates: false,
+  //     majorRules: { allow: [], disallow: [] }
+  //   });
+
+  //   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  //   expect(pkg.dependencies.lodash).toBe('^4.17.21');
+  // });
+
+  // it('runs npm install when installUpdates is true', async () => {
+  //   ncu.default.run
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' })
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' })
+  //     .mockResolvedValueOnce({ lodash: '^4.17.21' });
+
+  //   await runCheck({
+  //     cooldownDaysOverride: 5,
+  //     colour: false,
+  //     updatePackageJson: false,
+  //     installUpdates: true,
+  //     majorRules: { allow: [], disallow: [] }
+  //   });
+
+  //   expect(execSync).toHaveBeenCalledWith('npm install', expect.any(Object));
+  // });
 });

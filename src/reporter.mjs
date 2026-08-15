@@ -1,3 +1,5 @@
+import semver from "semver";
+
 const RED = "\x1b[31m";
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
@@ -8,28 +10,40 @@ function pad(str, width) {
 }
 
 function getUpdateType(pkg) {
+  // 1. Fallback always wins
   if (pkg.fallbackUsed) return "fallback";
+
+  // 2. Major flag from runner
   if (pkg.major) return "major";
-  return "minor";
+
+  // 3. Compute minor/patch using semver
+  const current = semver.coerce(pkg.currentVersion);
+  const target = semver.coerce(pkg.targetVersion);
+
+  if (!current || !target) return "patch"; // safest fallback
+
+  if (semver.minor(target) > semver.minor(current))  return "minor";
+
+  return "patch";
 }
 
 function colourVersion(type, version, enableColour) {
   if (!enableColour) return version;
   if (type === "major") return `${RED}${version}${RESET}`;
   if (type === "minor") return `${CYAN}${version}${RESET}`;
+  if (type === "patch") return `${GREEN}${version}${RESET}`;
   if (type === "fallback") return `${GREEN}${version}${RESET}`;
   return version;
 }
 
-function buildNotes(pkg) {
+function buildNotes(pkg, type) {
   const notes = [];
 
   if (pkg.fallbackUsed) {
     notes.push("Fallback update");
-  } else if (pkg.major) {
-    notes.push("Major update");
-  } else {
-    notes.push("Minor update");
+  } else if (['major', 'minor', 'patch'].includes(type)) {
+    const str = type[0].toUpperCase() + type.slice(1);
+    notes.push(`${str} update`);
   }
 
   if (pkg.major && !pkg.majorAllowed) {
@@ -65,12 +79,12 @@ export function formatReport(result) {
       const type = getUpdateType(p);
       const coloured = colourVersion(type, p.targetVersion, result.colour);
       const cooldown = `${p.cooldownDays}d`;
-      const notes = buildNotes(p);
+      const notes = buildNotes(p, type);
 
       const row =
         pad(p.name, 25) +
         pad(p.currentVersion, 15) +
-        pad(coloured, 15) +
+        pad(coloured, 24) +
         pad(cooldown, 12) +
         notes;
 
