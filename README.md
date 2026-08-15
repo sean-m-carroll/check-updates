@@ -163,7 +163,8 @@ check-updates --config check-updates.config.json
 The report displays a table with:
  - **Package name**
  - **Installed version**
- - **Updated version**
+ - **Available version**
+ - **Cooldown**
  - **Notes**
 
 Updated versions are colour‑coded:

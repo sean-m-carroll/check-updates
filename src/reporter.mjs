@@ -8,8 +8,9 @@ function pad(str, width) {
 }
 
 function getUpdateType(current, target) {
-  const [cMaj, cMin, cPatch] = current.replace(/^[^\d]*/, "").split(".").map(Number);
-  const [tMaj, tMin, tPatch] = target.replace(/^[^\d]*/, "").split(".").map(Number);
+  if (!current || !target) return "patch";
+  const [cMaj, cMin] = current.replace(/^[^\d]*/, "").split(".").map(Number);
+  const [tMaj, tMin] = target.replace(/^[^\d]*/, "").split(".").map(Number);
 
   if (tMaj > cMaj) return "major";
   if (tMin > cMin) return "minor";
@@ -32,35 +33,33 @@ export function formatReport(result) {
   lines.push(
     pad("Package", 25) +
     pad("Installed", 15) +
-    pad("Updated", 15) +
+    pad("Available", 15) +
+    pad("Cooldown", 12) +
     "Notes"
   );
-  lines.push("-".repeat(70));
+  lines.push("-".repeat(80));
 
-  if (result.packagesToUpdate.length === 0) {
-    lines.push("No packages eligible for update.");
-  } else {
-    for (const p of result.packagesToUpdate) {
-      const type = getUpdateType(p.currentVersion, p.targetVersion);
-      const coloured = colourVersion(type, p.targetVersion, result.colour);
+  for (const p of result.packagesToUpdate) {
+    const type = getUpdateType(p.currentVersion, p.targetVersion);
+    const coloured = colourVersion(type, p.targetVersion, result.colour);
 
-      const notes = [
-        p.major ? "Major update" : "",
-        p.majorAllowed ? "Allowed" : "Blocked"
-      ].filter(Boolean).join(", ");
+    const notes = [
+      p.major ? "Major update" : "",
+      p.majorAllowed ? "Allowed" : "Blocked"
+    ].filter(Boolean).join(", ");
 
-      lines.push(
-        pad(p.name, 25) +
-        pad(p.currentVersion, 15) +
-        pad(coloured, 15) +
-        notes
-      );
-    }
+    lines.push(
+      pad(p.name, 25) +
+      pad(p.currentVersion ?? "-", 15) +
+      pad(coloured ?? "-", 15) +
+      pad(`${p.cooldownDays ?? '-'}d`, 12) +
+      notes
+    );
   }
 
   lines.push("");
   lines.push("Major updates:");
-  lines.push("-".repeat(70));
+  lines.push("-".repeat(80));
 
   if (result.majorUpdates.length === 0) {
     lines.push("None");
@@ -71,8 +70,9 @@ export function formatReport(result) {
 
       lines.push(
         pad(p.name, 25) +
-        pad(p.currentVersion, 15) +
-        pad(coloured, 15) +
+        pad(p.currentVersion ?? "-", 15) +
+        pad(coloured ?? "-", 15) +
+        pad(`${p.cooldownDays ?? '-'}d`, 12) +
         notes
       );
     }

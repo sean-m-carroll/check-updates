@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { formatReport } from '../src/reporter.mjs';
 
 describe('reporter coloured table', () => {
-  it('matches snapshot without colour', () => {
+  it('matches snapshot without colour and with cooldown column', () => {
     const result = {
       cooldownDays: 10,
       colour: false,
@@ -12,11 +12,10 @@ describe('reporter coloured table', () => {
           currentVersion: '^4.0.0',
           targetVersion: '^5.0.0',
           depType: 'dependency',
-          withinCooldown: false,
-          ignoreCooldown: false,
           major: true,
           majorAllowed: true,
-          eligible: true
+          eligible: true,
+          cooldownDays: 12
         }
       ],
       majorUpdates: []

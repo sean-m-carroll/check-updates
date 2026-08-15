@@ -9,6 +9,8 @@ function readPackageJson() {
 }
 
 function isMajorUpdate(current, target) {
+  if (!current || !target) return false; // prevent crash
+
   const [cMaj] = current.replace(/^[^\d]*/, '').split('.').map(Number);
   const [tMaj] = target.replace(/^[^\d]*/, '').split('.').map(Number);
   return tMaj > cMaj;
@@ -19,13 +21,22 @@ export async function runCheck(config) {
 
   const upgrades = await ncu.run({
     packageFile: 'package.json',
-    jsonUpgraded: true
+    jsonUpgraded: true,
+    jsonAll: true
   });
 
   const packagesToUpdate = [];
   const majorUpdates = [];
 
-  for (const [name, targetVersion] of Object.entries(upgrades)) {
+  for (const [name, meta] of Object.entries(upgrades)) {
+    // Support both shapes:
+    // Shape A: meta.latest
+    // Shape B: meta is the version string
+    const targetVersion =
+      typeof meta === 'string'
+        ? meta
+        : meta.latest;
+
     const currentVersion =
       pkg.dependencies?.[name] || pkg.devDependencies?.[name];
 
@@ -36,6 +47,16 @@ export async function runCheck(config) {
     const eligible =
       !major || (major && majorAllowed && !majorBlocked);
 
+    // Cooldown calculation (safe)
+    let cooldownDays = null;
+    if (meta && typeof meta === 'object' && meta.time) {
+      const publishedDate = meta.time.modified || meta.time.created;
+      if (publishedDate) {
+        const publishedMs = new Date(publishedDate).getTime();
+        cooldownDays = Math.floor((Date.now() - publishedMs) / 86400000);
+      }
+    }
+
     const entry = {
       name,
       currentVersion,
@@ -45,6 +66,7 @@ export async function runCheck(config) {
       eligible,
       ignoreCooldown: false,
       withinCooldown: false,
+      cooldownDays,
       depType: pkg.dependencies?.[name] ? 'dependency' : 'devDependency'
     };
 

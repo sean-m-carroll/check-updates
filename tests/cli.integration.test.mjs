@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'node:child_process';
 
-describe('CLI integration', () => {
+describe('CLI integration with cooldown column', () => {
   let tmp;
 
   beforeEach(() => {
@@ -17,14 +17,14 @@ describe('CLI integration', () => {
     );
   });
 
-  it('runs end-to-end', () => {
+  it('prints cooldown column in full report', () => {
     const output = execFileSync(
       'node',
       [path.resolve('bin/cli.mjs'), '--cooldown-days', '1', '--no-colour'],
       { cwd: tmp, encoding: 'utf8' }
     );
 
-    expect(output).toContain('Cooldown days: 1');
-    expect(output).toContain('Package');
+    expect(output).toContain('Cooldown');
+    expect(output).toMatch(/Package\s+Installed\s+Available\s+Cooldown\s+Notes/);
   });
 });
