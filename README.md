@@ -2,18 +2,16 @@
 
 A Node.js CLI tool that checks your project’s dependencies using **[npm-check-updates](https://github.com/raineorshine/npm-check-updates)**, applies **cooldown rules**, enforces **major‑update policies**, and prints a **colour‑coded, column‑formatted report** showing which packages can be safely updated.
 
----
 
 ## Requirements
 
 - **Node.js:** `^22.22.2 || ^24.15.0 || >=26.0.0`
 - **npm:** `>=10.0.0`
 
----
 
 ## 📦 Installation
 
-### Global install
+#### Global install
 
 ```bash
 npm install -g @4t2/check-updates
@@ -24,7 +22,7 @@ Run globally:
 check-updates
 ```
 
-### Local install
+#### Local install
 ```bash
 npm install @4t2/check-updates
 ```
@@ -34,9 +32,9 @@ Run locally:
 npx check-updates
 ```
 
----
 
-### 🚀 Usage
+## 🚀 Usage
+
 #### Basic usage
 ```
 check-updates
@@ -49,12 +47,11 @@ check-updates --cooldown-days 7 --update-package-json
 
 #### With a config file
 ```
-check-updates --config ncu-config.json
+check-updates --config check-updates.config.json
 ```
 
----
 
-### ⚙️ Configuration Options
+## ⚙️ Configuration Options
 You can configure the tool using:
  - CLI flags
  - A JSON config file
@@ -64,13 +61,14 @@ You can configure the tool using:
 
 Below are all supported options.
 
----
+***
 
 `cooldownDaysOverride`
+
 Number of days a new version must exist before being eligible for update.
 Overrides npm’s `minimum-release-age`.
 
----
+***
 
 `ignoreCooldownPatterns`
 
@@ -82,17 +80,19 @@ Example:
 "ignoreCooldownPatterns": ["^eslint", ".*-beta$"]
 ```
 
----
+***
 
 `updatePackageJson`
+
 If `true`, updated versions are written into your `package.json`.
 
----
+***
 
 `installUpdates`
+
 If `true`, runs `npm install` after updating `package.json`.
 
----
+***
 
 `majorRules.allow`
 
@@ -105,7 +105,7 @@ Example:
 }
 ```
 
----
+***
 
 `majorRules.disallow`
 
@@ -118,7 +118,7 @@ Example:
 }
 ```
 
----
+***
 
 `colour`
 
@@ -136,10 +136,9 @@ Config file:
 
 Useful for CI environments where ANSI colours are stripped.
 
----
 
-### 📄 Example Config File
-Save as `ncu-config.json`:
+## 📄 Example Config File
+Save as `check-updates.config.json`:
 ```json
 {
   "cooldownDaysOverride": 10,
@@ -156,10 +155,9 @@ Save as `ncu-config.json`:
 
 Use it:
 ```bash
-check-updates --config ncu-config.json
+check-updates --config check-updates.config.json
 ```
 
----
 
 ## 📊 Report Format
 The report displays a table with:
@@ -178,7 +176,6 @@ Disable colours:
 check-updates --no-colour
 ```
 
----
 
 ## 🧪 Testing
 
@@ -192,7 +189,6 @@ Update snapshots:
 npm test -- --update
 ```
 
----
 
 ## 🔧 Local Development
 
@@ -208,7 +204,6 @@ check-updates
 
 Useful for testing before publishing.
 
----
 
 ## 📁 Project Goals
 
