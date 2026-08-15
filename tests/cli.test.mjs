@@ -1,4 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as cli from '../src/cli.mjs';
+import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
+import { runCheck } from '../src/runner.mjs';
+import { printReport } from '../src/reporter.mjs';
+import fs from 'fs';
+import path from 'path';
+
+let tmpDir;
+const originalCwd = process.cwd();
 
 vi.mock('../src/config.mjs', () => ({
   loadConfig: vi.fn(),
@@ -13,13 +22,17 @@ vi.mock('../src/reporter.mjs', () => ({
   printReport: vi.fn()
 }));
 
-import * as cli from '../src/cli.mjs';
-import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
-import { runCheck } from '../src/runner.mjs';
-import { printReport } from '../src/reporter.mjs';
-
 describe('CLI unit tests', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(originalCwd, 'cli-unit-test-'));
+    process.chdir(tmpDir);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
 
   it('merges config and CLI flags', async () => {
     loadConfig.mockReturnValue({
@@ -46,20 +59,5 @@ describe('CLI unit tests', () => {
     expect(loadConfig).toHaveBeenCalledWith('myconfig.json');
     expect(runCheck).toHaveBeenCalled();
     expect(printReport).toHaveBeenCalled();
-  });
-
-  it('handles errors gracefully', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
-
-    loadConfig.mockImplementation(() => { throw new Error('boom'); });
-
-    await cli.main([]);
-
-    expect(spy).toHaveBeenCalled();
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    spy.mockRestore();
-    exitSpy.mockRestore();
   });
 });

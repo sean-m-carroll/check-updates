@@ -9,7 +9,7 @@ function readPackageJson() {
 }
 
 function isMajorUpdate(current, target) {
-  if (!current || !target) return false; // prevent crash
+  if (!current || !target) return false;
 
   const [cMaj] = current.replace(/^[^\d]*/, '').split('.').map(Number);
   const [tMaj] = target.replace(/^[^\d]*/, '').split('.').map(Number);
@@ -19,26 +19,25 @@ function isMajorUpdate(current, target) {
 export async function runCheck(config) {
   const pkg = readPackageJson();
 
+  // 🔑 Use the simple upgrades map: { pkgName: newVersion }
   const upgrades = await ncu.run({
-    packageFile: 'package.json',
-    jsonUpgraded: true,
-    jsonAll: true
+    packageFile: 'package.json'
   });
 
   const packagesToUpdate = [];
   const majorUpdates = [];
 
-  for (const [name, meta] of Object.entries(upgrades)) {
-    // Support both shapes:
-    // Shape A: meta.latest
-    // Shape B: meta is the version string
-    const targetVersion =
-      typeof meta === 'string'
-        ? meta
-        : meta.latest;
+  // Only process actual dependencies/devDependencies
+  const allDeps = {
+    ...pkg.dependencies,
+    ...pkg.devDependencies
+  };
 
-    const currentVersion =
-      pkg.dependencies?.[name] || pkg.devDependencies?.[name];
+  for (const name of Object.keys(allDeps)) {
+    const targetVersion = upgrades[name];
+    if (!targetVersion) continue; // no update for this package
+
+    const currentVersion = allDeps[name];
 
     const major = isMajorUpdate(currentVersion, targetVersion);
     const majorAllowed = config.majorRules.allow.includes(name);
@@ -47,16 +46,7 @@ export async function runCheck(config) {
     const eligible =
       !major || (major && majorAllowed && !majorBlocked);
 
-    // Cooldown calculation (safe)
-    let cooldownDays = null;
-    if (meta && typeof meta === 'object' && meta.time) {
-      const publishedDate = meta.time.modified || meta.time.created;
-      if (publishedDate) {
-        const publishedMs = new Date(publishedDate).getTime();
-        cooldownDays = Math.floor((Date.now() - publishedMs) / 86400000);
-      }
-    }
-
+    // For now, use the global cooldown override per package
     const entry = {
       name,
       currentVersion,
@@ -66,7 +56,7 @@ export async function runCheck(config) {
       eligible,
       ignoreCooldown: false,
       withinCooldown: false,
-      cooldownDays,
+      cooldownDays: config.cooldownDaysOverride,
       depType: pkg.dependencies?.[name] ? 'dependency' : 'devDependency'
     };
 

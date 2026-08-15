@@ -1,14 +1,28 @@
-import { execSync } from 'node:child_process';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadConfig, getNpmMinimumReleaseAge } from '../src/config.mjs';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'node:child_process';
+
+let tmpDir;
+const originalCwd = process.cwd();
 
 vi.mock('node:child_process', () => ({
   execSync: vi.fn()
 }));
 
 describe('config.mjs', () => {
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(originalCwd, 'config-test-'));
+    process.chdir(tmpDir);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
   it('loads defaults when no config file is provided', () => {
     const cfg = loadConfig(null);
     expect(cfg.updatePackageJson).toBe(false);
@@ -20,8 +34,8 @@ describe('config.mjs', () => {
   });
 
   it('loads config file and converts regex patterns', () => {
-    const tmp = path.resolve('tmp-config.json');
-    fs.writeFileSync(tmp, JSON.stringify({
+    const configPath = path.join(tmpDir, 'ncu-config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
       cooldownDaysOverride: 10,
       ignoreCooldownPatterns: ['^eslint'],
       updatePackageJson: true,
@@ -30,14 +44,12 @@ describe('config.mjs', () => {
       colour: false
     }));
 
-    const cfg = loadConfig(tmp);
+    const cfg = loadConfig(configPath);
 
     expect(cfg.cooldownDaysOverride).toBe(10);
     expect(cfg.ignoreCooldownPatterns[0].test('eslint')).toBe(true);
     expect(cfg.majorRules.allow).toContain('react');
     expect(cfg.colour).toBe(false);
-
-    fs.unlinkSync(tmp);
   });
 
   it('reads npm minimum-release-age', () => {
@@ -47,7 +59,6 @@ describe('config.mjs', () => {
 
   it('falls back when npm config fails', () => {
     execSync.mockImplementation(() => { throw new Error('fail'); });
-
     expect(getNpmMinimumReleaseAge()).toBe(7);
   });
 });
