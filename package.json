@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "npm-check-updates": "^17.0.0",
-    "yargs": "^17.7.2"
+    "yargs": "17.7.3"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.10",
-    "vitest": "^4.0.0"
+    "vitest": "4.1.10"
   }
 }
