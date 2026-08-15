@@ -2,21 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'node:child_process';
 
-const DEFAULT_COOLDOWN_DAYS = 7;
-
-export function getNpmMinimumReleaseAge() {
-  try {
-    const value = execSync('npm config get minimum-release-age', {
-      encoding: 'utf8'
-    }).trim();
-
-    const num = Number(value);
-    return Number.isFinite(num) && num > 0 ? num : DEFAULT_COOLDOWN_DAYS;
-  } catch {
-    return DEFAULT_COOLDOWN_DAYS;
-  }
-}
-
 export function loadConfig(configPath) {
   if (!configPath) {
     return {
@@ -24,21 +9,33 @@ export function loadConfig(configPath) {
       ignoreCooldownPatterns: [],
       updatePackageJson: false,
       installUpdates: false,
-      majorRules: {},
-      colour: false
+      majorRules: { allow: [], disallow: [] },
+      colour: true
     };
   }
 
-  const resolved = path.resolve(process.cwd(), configPath);
-  const raw = fs.readFileSync(resolved, 'utf8');
-  const json = JSON.parse(raw);
+  const full = path.resolve(configPath);
+  const raw = JSON.parse(fs.readFileSync(full, 'utf8'));
 
   return {
-    cooldownDaysOverride: json.cooldownDaysOverride ?? null,
-    ignoreCooldownPatterns: json.ignoreCooldownPatterns?.map((p) => new RegExp(p)) ?? [],
-    updatePackageJson: json.updatePackageJson ?? false,
-    installUpdates: json.installUpdates ?? false,
-    majorRules: json.majorRules ?? {},
-    colour: json.noColour ?? false
+    cooldownDaysOverride: raw.cooldownDaysOverride ?? null,
+    ignoreCooldownPatterns: (raw.ignoreCooldownPatterns ?? []).map(
+      (p) => new RegExp(p)
+    ),
+    updatePackageJson: raw.updatePackageJson ?? false,
+    installUpdates: raw.installUpdates ?? false,
+    majorRules: raw.majorRules ?? { allow: [], disallow: [] },
+    colour: raw.colour ?? true
   };
+}
+
+export function getNpmMinimumReleaseAge() {
+  try {
+    const output = execSync('npm config get minimum-release-age', {
+      encoding: 'utf8'
+    }).trim();
+    return Number(output);
+  } catch {
+    return 7;
+  }
 }

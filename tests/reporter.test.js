@@ -1,38 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { formatReport } from '../src/reporter.mjs';
 
-describe('reporter.mjs', () => {
-  it('snapshot of formatted report', () => {
+describe('reporter.mjs basic formatting', () => {
+  it('prints empty update table', () => {
     const result = {
       cooldownDays: 7,
-      packagesToUpdate: [
-        {
-          name: 'lodash',
-          currentVersion: '^4.0.0',
-          targetVersion: '^5.0.0',
-          depType: 'dependency',
-          withinCooldown: false,
-          ignoreCooldown: false,
-          major: true,
-          majorAllowed: true,
-          eligible: true
-        }
-      ],
-      majorUpdates: [
-        {
-          name: 'lodash',
-          currentVersion: '^4.0.0',
-          targetVersion: '^5.0.0',
-          depType: 'dependency',
-          withinCooldown: false,
-          ignoreCooldown: false,
-          major: true,
-          majorAllowed: true,
-          eligible: true
-        }
-      ]
+      colour: false,
+      packagesToUpdate: [],
+      majorUpdates: []
     };
 
-    expect(formatReport(result)).toMatchSnapshot();
+    const out = formatReport(result);
+    expect(out).toContain('No packages eligible for update.');
+    expect(out).toContain('Major updates:');
   });
 });

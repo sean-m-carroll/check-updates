@@ -1,8 +1,11 @@
-// ANSI colours
 const RED = "\x1b[31m";
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
 const RESET = "\x1b[0m";
+
+function pad(str, width) {
+  return str.padEnd(width, " ");
+}
 
 function getUpdateType(current, target) {
   const [cMaj, cMin, cPatch] = current.replace(/^[^\d]*/, "").split(".").map(Number);
@@ -15,14 +18,9 @@ function getUpdateType(current, target) {
 
 function colourVersion(type, version, enableColour) {
   if (!enableColour) return version;
-
   if (type === "major") return `${RED}${version}${RESET}`;
   if (type === "minor") return `${CYAN}${version}${RESET}`;
   return `${GREEN}${version}${RESET}`;
-}
-
-function pad(str, width) {
-  return str.padEnd(width, " ");
 }
 
 export function formatReport(result) {
@@ -31,7 +29,6 @@ export function formatReport(result) {
   lines.push(`Cooldown days: ${result.cooldownDays}`);
   lines.push("");
 
-  // Table header
   lines.push(
     pad("Package", 25) +
     pad("Installed", 15) +
@@ -49,8 +46,7 @@ export function formatReport(result) {
 
       const notes = [
         p.major ? "Major update" : "",
-        p.ignoreCooldown ? "Ignored cooldown" : "",
-        p.withinCooldown ? "Within cooldown" : ""
+        p.majorAllowed ? "Allowed" : "Blocked"
       ].filter(Boolean).join(", ");
 
       lines.push(
@@ -63,14 +59,14 @@ export function formatReport(result) {
   }
 
   lines.push("");
-  lines.push("Major updates available:");
+  lines.push("Major updates:");
   lines.push("-".repeat(70));
 
   if (result.majorUpdates.length === 0) {
     lines.push("None");
   } else {
     for (const p of result.majorUpdates) {
-      const coloured = colourVersion("major", p.targetVersion);
+      const coloured = colourVersion("major", p.targetVersion, result.colour);
       const notes = p.majorAllowed ? "Allowed" : "Blocked";
 
       lines.push(

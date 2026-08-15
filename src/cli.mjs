@@ -14,10 +14,7 @@ export async function main(args = hideBin(process.argv)) {
       .option('ignore-pattern', { type: 'array' })
       .option('allow-major', { type: 'array' })
       .option('disallow-major', { type: 'array' })
-      .option('no-colour', {
-        type: 'boolean',
-        describe: 'Disable colour output in the report'
-      })
+      .option('no-colour', { type: 'boolean' })
       .help()
       .parse();
 
@@ -37,7 +34,8 @@ export async function main(args = hideBin(process.argv)) {
         ...baseConfig.majorRules,
         allow: argv.allowMajor ?? baseConfig.majorRules.allow ?? [],
         disallow: argv.disallowMajor ?? baseConfig.majorRules.disallow ?? []
-      }
+      },
+      colour: argv.noColour ? false : baseConfig.colour ?? true
     };
 
     const result = await runCheck(effectiveConfig);
