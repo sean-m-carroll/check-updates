@@ -2,16 +2,10 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'fs';
 import path from 'path';
-import { cleanupDir } from './helpers/cleanup.mjs';
 
 let tmp;
 
 describe('CLI integration', () => {
-  afterEach(() => {
-    console.log(`Cleanup: ${tmp}`);
-    cleanupDir(tmp);
-  });
-
   it('runs end-to-end', () => {
     tmp = fs.mkdtempSync(path.join(process.cwd(), 'cli-test-'));
     fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({
