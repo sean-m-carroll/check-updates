@@ -14,6 +14,10 @@ export async function main(args = hideBin(process.argv)) {
       .option('ignore-pattern', { type: 'array' })
       .option('allow-major', { type: 'array' })
       .option('disallow-major', { type: 'array' })
+      .option('no-colour', {
+        type: 'boolean',
+        describe: 'Disable colour output in the report'
+      })
       .help()
       .parse();
 

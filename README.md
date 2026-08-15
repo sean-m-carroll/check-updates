@@ -1,27 +1,219 @@
 # Check Updates
 
-Utilising [npm-check-updates](https://github.com/raineorshine/npm-check-updates) this package allows you to update your package.json dependencies to the latest minor/patch version.
+A Node.js CLI tool that checks your project’s dependencies using **[npm-check-updates](https://github.com/raineorshine/npm-check-updates)**, applies **cooldown rules**, enforces **major‑update policies**, and prints a **colour‑coded, column‑formatted report** showing which packages can be safely updated.
 
-It uses [npm-check-updates](https://github.com/raineorshine/npm-check-updates) to do most of the heavy lifting but allows for some extra build in options:
-- It respects the npm cooldown option from the system (`min-release-age`) but will also allow this to be overriddden - using regex to either allow whitelisting of a suite of packages or specific packages. This means you can ignore the cooldown period for your own organisations packages with little to no effort.
-- Allows for control of automically updating the package.json with the updated packages.
-- Allows for control of automically installing the updated packages (whilst applying the appropriate cooldown rule).
-- Reports on which packages have updates available
-- Reports on packages which have a newer major version (not installed by default)
-- Allows for specifying via regex which, if any packages, are allowed to update when major releases are available.
+---
 
 ## Requirements
 
 - **Node.js:** `^22.22.2 || ^24.15.0 || >=26.0.0`
 - **npm:** `>=10.0.0`
 
-## Installation
+---
 
-Install globally to use `@4t2/check-updates`:
+## 📦 Installation
 
-```sh
+### Global install
+
+```bash
 npm install -g @4t2/check-updates
 ```
 
-## Configuration
+Run globally:
+```bash
+check-updates
+```
 
+### Local install
+```bash
+npm install @4t2/check-updates
+```
+
+Run locally:
+```bash
+npx check-updates
+```
+
+---
+
+### 🚀 Usage
+#### Basic usage
+```
+check-updates
+```
+
+#### With flags
+```
+check-updates --cooldown-days 7 --update-package-json
+```
+
+#### With a config file
+```
+check-updates --config ncu-config.json
+```
+
+---
+
+### ⚙️ Configuration Options
+You can configure the tool using:
+ - CLI flags
+ - A JSON config file
+ - npm config (minimum-release-age)
+ - Defaults
+
+
+Below are all supported options.
+
+---
+
+`cooldownDaysOverride`
+Number of days a new version must exist before being eligible for update.
+Overrides npm’s `minimum-release-age`.
+
+---
+
+`ignoreCooldownPatterns`
+
+Array of regex patterns.
+Packages matching these patterns **ignore cooldown rules**.
+
+Example:
+```json
+"ignoreCooldownPatterns": ["^eslint", ".*-beta$"]
+```
+
+---
+
+`updatePackageJson`
+If `true`, updated versions are written into your `package.json`.
+
+---
+
+`installUpdates`
+If `true`, runs `npm install` after updating `package.json`.
+
+---
+
+`majorRules.allow`
+
+Packages allowed to receive major updates.
+
+Example:
+```json
+"majorRules": {
+  "allow": ["typescript"]
+}
+```
+
+---
+
+`majorRules.disallow`
+
+Packages blocked from major updates.
+
+Example:
+```json
+"majorRules": {
+  "disallow": ["react"]
+}
+```
+
+---
+
+`colour`
+
+Enable or disable colour output in the report.
+
+CLI flag:
+```bash
+--no-colour
+```
+
+Config file:
+```json
+"colour": false
+```
+
+Useful for CI environments where ANSI colours are stripped.
+
+---
+
+### 📄 Example Config File
+Save as `ncu-config.json`:
+```json
+{
+  "cooldownDaysOverride": 10,
+  "ignoreCooldownPatterns": ["^eslint", "^vitest"],
+  "updatePackageJson": true,
+  "installUpdates": false,
+  "majorRules": {
+    "allow": ["typescript"],
+    "disallow": ["react"]
+  },
+  "colour": true
+}
+```
+
+Use it:
+```bash
+check-updates --config ncu-config.json
+```
+
+---
+
+## 📊 Report Format
+The report displays a table with:
+ - **Package name**
+ - **Installed version**
+ - **Updated version**
+ - **Notes**
+
+Updated versions are colour‑coded:
+ - **Red** → major update
+ - **Cyan** → minor update
+ - **Green** → patch update
+
+Disable colours:
+```bash
+check-updates --no-colour
+```
+
+---
+
+## 🧪 Testing
+
+Run all tests:
+```bash
+npm test
+```
+
+Update snapshots:
+```bash
+npm test -- --update
+```
+
+---
+
+## 🔧 Local Development
+
+Link globally:
+```bash
+npm link
+```
+
+Run CLI:
+```bash
+check-updates
+```
+
+Useful for testing before publishing.
+
+---
+
+## 📁 Project Goals
+
+ - Enforce safe dependency updates
+ - Prevent accidental major upgrades
+ - Respect release cooldowns
+ - Provide clear, readable reports
+ - Integrate cleanly with CI

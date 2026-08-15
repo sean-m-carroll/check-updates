@@ -24,7 +24,8 @@ export function loadConfig(configPath) {
       ignoreCooldownPatterns: [],
       updatePackageJson: false,
       installUpdates: false,
-      majorRules: {}
+      majorRules: {},
+      colour: false
     };
   }
 
@@ -37,6 +38,7 @@ export function loadConfig(configPath) {
     ignoreCooldownPatterns: json.ignoreCooldownPatterns?.map((p) => new RegExp(p)) ?? [],
     updatePackageJson: json.updatePackageJson ?? false,
     installUpdates: json.installUpdates ?? false,
-    majorRules: json.majorRules ?? {}
+    majorRules: json.majorRules ?? {},
+    colour: json.noColour ?? false
   };
 }
