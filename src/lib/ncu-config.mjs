@@ -1,5 +1,5 @@
 import path from 'node:path';
-import cooldown from './cooldown';
+import cooldown from './cooldown.mjs';
 
 export default ({ config, target = null } = {}) => ({
     cooldown: packageName => cooldown({ config, name: packageName }),
