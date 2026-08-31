@@ -162,7 +162,7 @@ export async function runCheck(config) {
       }
     }
 
-    fs.writeFileSync(pkgPath, JSON.stringify(updated, null, 2));
+    fs.writeFileSync(pkgPath, JSON.stringify(updated, null, 2) + '\n');
   }
 
   if (config.install) {
