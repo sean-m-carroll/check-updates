@@ -1,5 +1,3 @@
-import semver from "semver";
-
 const RED = "\x1b[31m";
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";

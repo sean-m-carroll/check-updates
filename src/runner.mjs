@@ -2,15 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import ncu from 'npm-check-updates';
 import { execSync } from 'node:child_process';
-import semver from "semver";
-
-const ncuConfig = ({ config, target = null } = {}) => ({
-    cooldown: packageName => cooldownPeriod({ config, name: packageName }),
-    deprecated: false, // Exclude deprecated packages
-    packageFile: path.resolve('package.json'),
-    removeRange: true, // Remove version ranges from the final package version.
-    ...(target && { target: target }),
-});
+import cooldownPeriod from './lib/cooldown.mjs';
+import ncuConfig from './lib/ncu-config.mjs';
 
 const filterMajor = ({ major, minor, patch }) => {
   return Object.fromEntries(
@@ -30,28 +23,9 @@ const filterMinor = ({ minor, patch }) => {
   );
 }
 
-const cooldownPeriod = ({ config, name }) => {
-  const rules = config.ignoreCooldown || [];
-  let cooldown = config.cooldown;
-
-  rules.forEach((rule) => {
-    const regex = new RegExp(rule);
-
-    if (name.match(regex)) {
-      cooldown = 0;
-    }
-    else if (name === rule) {
-      cooldown = 0;
-    }
-  })
-
-  return cooldown;
-};
-
-const isMajorAllowed = ({ name }) => {
+const isMajorAllowed = () => {
   return false;
 };
-
 
 const readPackageJson = () => {
   const pkgPath = path.resolve('package.json');
@@ -87,9 +61,9 @@ export async function runCheck(config) {
   for (const name of Object.keys(allDeps)) {
     const currentVersion = allDeps[name];
 
-    let isMajor = (majorVersions.hasOwnProperty(name));
-    let isMinor = (minorVersions.hasOwnProperty(name));
-    let isPatch = (patchVersions.hasOwnProperty(name));
+    let isMajor = Object.prototype.hasOwnProperty.call(majorVersions, name);
+    let isMinor = Object.prototype.hasOwnProperty.call(minorVersions, name);
+    let isPatch = Object.prototype.hasOwnProperty.call(patchVersions, name);
 
     // Determine appropriate version to update to
     let isFallback = false;
@@ -101,8 +75,8 @@ export async function runCheck(config) {
 
       isFallback = true;
       isMajor = false;
-      isMinor = (minorVersions.hasOwnProperty(name));
-      isPatch = (patchVersions.hasOwnProperty(name));
+      isMinor = Object.prototype.hasOwnProperty.call(minorVersions, name);
+      isPatch = Object.prototype.hasOwnProperty.call(patchVersions, name);
     }
 
     const cooldown = cooldownPeriod({ config, name });
@@ -135,7 +109,7 @@ export async function runCheck(config) {
       packagesToUpdate.push(entry);
     }
 
-    if (majorVersions.hasOwnProperty(name)) {
+    if (Object.prototype.hasOwnProperty.call(majorVersions, name)) {
       const majorEntry = JSON.parse(JSON.stringify(entry));
       majorEntry.update = {
         isFallback: false,
