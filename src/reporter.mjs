@@ -7,7 +7,7 @@ const alignText = ({ column, text }) => {
   let colourCorrection = 0
 
   if (column === 1) {
-    return text.padEnd(25);
+    return text.padEnd(30);
   }
   else if (column === 5) {
     return text;
@@ -16,6 +16,8 @@ const alignText = ({ column, text }) => {
   // Outputting coloured test changes the length of the string
   if (column === 3 && text !== 'Available') {
     colourCorrection = 9;
+  } else if (column === 4){
+    colourCorrection = -1;
   }
 
   return `${text.padStart(9 + colourCorrection)}   `;
