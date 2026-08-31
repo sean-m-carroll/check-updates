@@ -1,0 +1,48 @@
+Package                  Installed   Available   Cooldown    Notes
+--------------------------------------------------------------------------------
+@4t2/requests                2.0.0       2.0.1         7d    Patch update
+@vitest/coverage-v8         4.1.10      4.1.11         7d    Patch update
+@vitest/eslint-plugin       1.6.26      1.6.27         7d    Patch update
+eslint                      10.8.1      10.9.0         7d    Minor update
+globals                     17.9.0     17.11.0         7d    Minor update
+prettier                     2.8.7       2.8.8         7d    Patch update (Fallback)
+vitest                      4.1.10      4.1.11         7d    Patch update
+
+
+
+
+
+const versionDetails = (version) => {
+  const { semver, major, minor, patch } = version;
+
+  return {
+    version: semver,
+    major: parseInt(major),
+    minor: parseInt(minor),
+    patch: parseInt(patch),
+  }
+}
+
+// For packages that update frequently (e.g. daily releases), using a long cooldown
+// period (7+ days) with the default --target latest or --target @tag may prevent
+// all updates since new versions will be published before older ones meet the
+// cooldown requirement
+
+// This is why it targets 'greatest', instead of 'latest'
+module.exports = {
+  deprecated: false,
+  loglevel: 'warn',
+  pre: 0,
+  removeRange: true,
+  target: 'greatest',
+  upgrade: true,
+  filterResults: (packageName, versioning) => {
+    const defaultColour = '\x1b[37m';
+    const warningColour = '\x1b[31m';
+
+    const current = versionDetails(versioning.currentVersionSemver[0]);
+    const upgrade = versionDetails(versioning.upgradedVersionSemver);
+
+    return true;
+  }
+};

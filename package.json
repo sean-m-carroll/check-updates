@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "bin": {
-    "@4t2/check-updates": "./bin/cli.mjs"
+    "check-updates": "./bin/cli.mjs"
   },
   "scripts": {
     "test": "vitest run --coverage && node scripts/cleanup.mjs",
@@ -14,7 +14,7 @@
     "yargs": "17.7.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.10",
-    "vitest": "4.1.10"
+    "@vitest/coverage-v8": "4.1.11",
+    "vitest": "4.1.11"
   }
 }

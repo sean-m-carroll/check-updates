@@ -2,41 +2,79 @@ import fs from 'fs';
 import path from 'path';
 import ncu from 'npm-check-updates';
 import { execSync } from 'node:child_process';
+import semver from "semver";
 
-function readPackageJson() {
-  const pkgPath = path.resolve('package.json');
-  return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+const ncuConfig = ({ config, target = null } = {}) => ({
+    cooldown: packageName => cooldownPeriod({ config, name: packageName }),
+    deprecated: false, // Exclude deprecated packages
+    packageFile: path.resolve('package.json'),
+    removeRange: true, // Remove version ranges from the final package version.
+    ...(target && { target: target }),
+});
+
+const filterMajor = ({ major, minor, patch }) => {
+  return Object.fromEntries(
+    Object.entries(major).filter(([name, version]) => {
+      const inMinor = minor[name] === version;
+      const inPatch = patch[name] === version;
+      return !inMinor && !inPatch;
+    })
+  );
 }
 
-function isMajorUpdate(current, target) {
-  if (!current || !target) return false;
-  const [cMaj] = current.replace(/^[^\d]*/, '').split('.').map(Number);
-  const [tMaj] = target.replace(/^[^\d]*/, '').split('.').map(Number);
-  return tMaj > cMaj;
+const filterMinor = ({ minor, patch }) => {
+  return Object.fromEntries(
+    Object.entries(minor).filter(([name, version]) => {
+      return !(patch[name] && patch[name] === version);
+    })
+  );
+}
+
+const cooldownPeriod = ({ config, name }) => {
+  const rules = config.ignoreCooldown || [];
+  let cooldown = config.cooldown;
+
+  rules.forEach((rule) => {
+    const regex = new RegExp(rule);
+
+    if (name.match(regex)) {
+      cooldown = 0;
+    }
+    else if (name === rule) {
+      cooldown = 0;
+    }
+  })
+
+  return cooldown;
+};
+
+const isMajorAllowed = ({ name }) => {
+  return false;
+};
+
+
+const readPackageJson = () => {
+  const pkgPath = path.resolve('package.json');
+  return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 }
 
 export async function runCheck(config) {
   const pkg = readPackageJson();
 
-  // 1️⃣ Cooldown-safe latest versions
-  const latestSafe = await ncu.run({
-    packageFile: 'package.json',
-    minReleaseAge: config.cooldownDaysOverride
-  });
+  // 1️⃣ Patch versions
+  const patchConfig = ncuConfig({ config, target: 'patch' });
+  const patchSafe = await ncu(patchConfig);
+  const patchVersions = patchSafe;
 
-  // 2️⃣ Cooldown-safe minor versions
-  const minorSafe = await ncu.run({
-    packageFile: 'package.json',
-    minReleaseAge: config.cooldownDaysOverride,
-    target: 'minor'
-  });
+  // 2️⃣ Minor versions
+  const minorConfig = ncuConfig({ config, target: 'minor' });
+  const minorSafe = await ncu(minorConfig);
+  const minorVersions = filterMinor({ patch: patchSafe, minor: minorSafe });
 
-  // 3️⃣ Cooldown-safe patch versions
-  const patchSafe = await ncu.run({
-    packageFile: 'package.json',
-    minReleaseAge: config.cooldownDaysOverride,
-    target: 'patch'
-  });
+  // 3️⃣ Major versions
+  const majorConfig = ncuConfig({ config });
+  const majorSafe = await ncu(majorConfig);
+  const majorVersions = filterMajor({ major: majorSafe, minor: minorSafe, patch: patchSafe });
 
   const packagesToUpdate = [];
   const majorUpdates = [];
@@ -49,75 +87,92 @@ export async function runCheck(config) {
   for (const name of Object.keys(allDeps)) {
     const currentVersion = allDeps[name];
 
-    // Pattern-based major rules
-    const allowPatterns = config.majorRules.allow.map(p => new RegExp(p));
-    const disallowPatterns = config.majorRules.disallow.map(p => new RegExp(p));
+    let isMajor = (majorVersions.hasOwnProperty(name));
+    let isMinor = (minorVersions.hasOwnProperty(name));
+    let isPatch = (patchVersions.hasOwnProperty(name));
 
-    const matchesAllow = allowPatterns.some(r => r.test(name));
-    const matchesDisallow = disallowPatterns.some(r => r.test(name));
-
-    let majorAllowed;
-    if (matchesAllow && matchesDisallow) majorAllowed = false;
-    else if (matchesAllow) majorAllowed = true;
-    else if (matchesDisallow) majorAllowed = false;
-    else majorAllowed = false;
-
-    // Start with cooldown-safe latest
-    let targetVersion = latestSafe[name];
-    if (!targetVersion) continue;
-
-    const isMajorLatest = isMajorUpdate(currentVersion, targetVersion);
-
-    let fallbackUsed = false;
+    // Determine appropriate version to update to
+    let isFallback = false;
+    let targetVersion = majorVersions[name] || minorVersions[name] || patchVersions[name];
 
     // If latest is major and not allowed → fallback
-    if (isMajorLatest && !majorAllowed) {
-      targetVersion = minorSafe[name] || patchSafe[name];
-      if (!targetVersion) continue;
-      fallbackUsed = true;
+    if (isMajor && isMajorAllowed({ name }) === false) {
+      targetVersion = minorVersions[name] || patchVersions[name];
+
+      isFallback = true;
+      isMajor = false;
+      isMinor = (minorVersions.hasOwnProperty(name));
+      isPatch = (patchVersions.hasOwnProperty(name));
     }
 
-    // Compute major flag (Option B: fallback → major = false)
-    let major = isMajorUpdate(currentVersion, targetVersion);
-    if (major && fallbackUsed) {
-      major = false;
-    }
+    const cooldown = cooldownPeriod({ config, name });
+
+    let notes = '';
+    notes = cooldown === 0 ? 'Cooldown ignored' : notes;
+    notes = isFallback ? 'Fallback update' : notes;
 
     const entry = {
+      cooldown,
+      depType: pkg.dependencies?.[name] ? 'dependency' : 'devDependency',
       name,
-      currentVersion,
-      targetVersion,
-      major,
-      majorAllowed,
-      fallbackUsed,
-      eligible: !major || majorAllowed,
-      withinCooldown: false, // already enforced by minReleaseAge
-      cooldownDays: config.cooldownDaysOverride,
-      depType: pkg.dependencies?.[name] ? 'dependency' : 'devDependency'
+      update: {
+        isFallback,
+        isMajor,
+        isMinor,
+        isPatch,
+        notes,
+      },
+      versions: {
+        current: currentVersion,
+        major: majorVersions[name],
+        minor: minorVersions[name],
+        patch: patchVersions[name],
+        target: targetVersion,
+      },
     };
 
-    packagesToUpdate.push(entry);
-    if (major) majorUpdates.push(entry);
+    if ( isMajor || isMinor || isPatch) {
+      packagesToUpdate.push(entry);
+    }
+
+    if (majorVersions.hasOwnProperty(name)) {
+      const majorEntry = JSON.parse(JSON.stringify(entry));
+      majorEntry.update = {
+        isFallback: false,
+        isMajor: true,
+        isMinor: false,
+        isPatch: false,
+        notes: 'Update blocked',
+      };
+      majorEntry.versions.target = majorEntry.versions.major;
+
+      majorUpdates.push(majorEntry);
+    }
   }
 
-  if (config.updatePackageJson) {
+  if (config.update) {
     const pkgPath = path.resolve('package.json');
     const updated = { ...pkg };
 
     for (const p of packagesToUpdate) {
-      if (!p.eligible) continue;
       if (p.depType === 'dependency') {
-        updated.dependencies[p.name] = p.targetVersion;
+        updated.dependencies[p.name] = p.versions.target;
       } else {
-        updated.devDependencies[p.name] = p.targetVersion;
+        updated.devDependencies[p.name] = p.versions.target;
       }
     }
 
     fs.writeFileSync(pkgPath, JSON.stringify(updated, null, 2));
   }
 
-  if (config.installUpdates) {
-    execSync('npm install', { stdio: 'inherit' });
+  if (config.install) {
+    for (const p of packagesToUpdate) {
+      if (p.depType === 'dependency') {
+        execSync(`npm i ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
+      } else {
+        execSync(`npm i -D ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
+      }
+    };
   }
 
   return {
