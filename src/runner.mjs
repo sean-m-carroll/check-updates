@@ -139,14 +139,34 @@ export async function runCheck(config) {
     fs.writeFileSync(pkgPath, JSON.stringify(updated, null, 2) + '\n');
   }
 
+
+
   if (config.install) {
+    // for (const p of packagesToUpdate) {
+    //   if (p.depType === 'dependency') {
+    //     execSync(`npm i ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
+    //   } else {
+    //     execSync(`npm i -D ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
+    //   }
+    // }
+
     for (const p of packagesToUpdate) {
-      if (p.depType === 'dependency') {
-        execSync(`npm i ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
-      } else {
-        execSync(`npm i -D ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'inherit' });
+      try {
+        if (p.depType === 'dependency') {
+          execSync(`npm i ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'ignore' });
+        } else {
+          execSync(`npm i -D ${p.name} --min-release-age=${p.cooldown}`, { stdio: 'ignore' });
+        }
+
+        // Success message
+        console.log(`  \x1b[32m✓\x1b[0m ${p.name} ${p.versions.target} successfully installed`);
+
+      } catch (error) {
+        // Failure message and script termination
+        console.error(`  \x1b[31m✗\x1b[0m ${p.name} ${p.versions.target} failed to install`);
+        process.exit(1);
       }
-    };
+    }
   }
 
   return {
