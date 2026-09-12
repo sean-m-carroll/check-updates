@@ -19,5 +19,6 @@ export default defineConfig({
     environment: 'jsdom',
     exclude: ['**/node_modules/**'],
     globals: true,
+    reporters: ['tree'],
   },
 });
